@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ocorrências - Sistema de Ocorrências</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <h1>📋 Sistema de Ocorrências</h1>
+      <div class="header-actions">
+        <div class="user-info">
+          <span id="userName">Usuário</span>
+          <span id="userRole" class="user-badge">USER</span>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="logout()">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav-content">
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <a href="ocorrencias.html" class="nav-link active">Ocorrências</a>
+      <a href="nova-ocorrencia.html" class="nav-link">Nova Ocorrência</a>
+      <a href="admin.html" class="nav-link" id="adminLink" style="display: none;">Administração</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container-fluid">
+    <!-- Filtros -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Filtros</h2>
+      </div>
+      <div class="filters">
+        <div class="filter-group">
+          <label class="form-label">Buscar</label>
+          <input type="text" id="busca" class="form-input" placeholder="Título, descrição, denunciante...">
+        </div>
+        <div class="filter-group">
+            <label class="form-label">Status</label>
+            <select id="filtroStatus" class="form-select">
+                <option value="">Todos</option>
+                <option value="em andamento">Em Andamento</option>
+                <option value="resolvida">Resolvida</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="form-label">Prioridade</label>
+          <select id="filtroPrioridade" class="form-select">
+            <option value="">Todas</option>
+            <option value="baixa">Baixa</option>
+            <option value="média">Média</option>
+            <option value="alta">Alta</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="form-label">Empresa</label>
+          <select id="filtroEmpresa" class="form-select"></select>
+        </div>
+        <div class="filter-group">
+          <label class="form-label">Setor</label>
+          <select id="filtroSetor" class="form-select"></select>
+        </div>
+        <div class="filter-group">
+          <button class="btn btn-primary" onclick="carregarOcorrencias()">Filtrar</button>
+          <button class="btn btn-secondary" onclick="limparFiltros()">Limpar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de Ocorrências -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Todas as Ocorrências</h2>
+        <a href="nova-ocorrencia.html" class="btn btn-primary btn-sm">+ Nova Ocorrência</a>
+      </div>
+      <div id="listaOcorrencias">
+        <div style="text-align: center; padding: 40px; color: #64748b;">
+          <div class="loading" style="width: 40px; height: 40px; border-width: 4px; margin: 0 auto 20px;"></div>
+          <p>Carregando ocorrências...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  
+  <script>
+    let currentUser = null;
+
+    // Inicializar
+    window.addEventListener('DOMContentLoaded', async () => {
+      currentUser = await checkAuth();
+      if (!currentUser) return;
+
+      document.getElementById('userName').textContent = currentUser.nome;
+      document.getElementById('userRole').textContent = currentUser.role.toUpperCase();
+      
+      if (isAdmin(currentUser)) {
+        document.getElementById('adminLink').style.display = 'block';
+      }
+
+      await loadSelectOptions('filtroEmpresa', 'empresas');
+      await loadSelectOptions('filtroSetor', 'setores');
+      await carregarOcorrencias();
+    });
+
+    // Carregar ocorrências
+    async function carregarOcorrencias() {
+      const busca = document.getElementById('busca').value.toLowerCase();
+      const status = document.getElementById('filtroStatus').value;
+      const prioridade = document.getElementById('filtroPrioridade').value;
+      const empresaId = document.getElementById('filtroEmpresa').value;
+      const setorId = document.getElementById('filtroSetor').value;
+
+      let query = supabase
+        .from('occurrences')
+        .select(`
+            *,
+            empresas(nome),
+            setores(nome),
+            categorias(nome),
+            users(nome)
+        `)
+        .order('numero', { ascending: false });
+
+      if (status) query = query.eq('status', status);
+      if (prioridade) query = query.eq('prioridade', prioridade);
+      if (empresaId) query = query.eq('empresa_id', empresaId);
+      if (setorId) query = query.eq('setor_id', setorId);
+
+      const { data: ocorrencias, error } = await query;
+
+      if (error) {
+        console.error('Erro ao carregar ocorrências:', error);
+        showNotification('Erro ao carregar ocorrências', 'error');
+        return;
+      }
+
+      // Filtrar por busca de texto
+      let ocorrenciasFiltradas = ocorrencias;
+      if (busca) {
+        ocorrenciasFiltradas = ocorrencias.filter(o => 
+          (o.titulo?.toLowerCase().includes(busca)) ||
+          (o.descricao?.toLowerCase().includes(busca)) ||
+          (o.denunciante?.toLowerCase().includes(busca)) ||
+          (o.localizacao?.toLowerCase().includes(busca))
+        );
+      }
+
+      renderizarOcorrencias(ocorrenciasFiltradas);
+    }
+
+    // Renderizar ocorrências
+    function renderizarOcorrencias(ocorrencias) {
+        const container = document.getElementById('listaOcorrencias');
+
+        if (ocorrencias.length === 0) {
+            container.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #64748b;">
+                <p style="font-size: 18px; margin-bottom: 10px;">📭 Nenhuma ocorrência encontrada</p>
+                <p>Tente ajustar os filtros ou criar uma nova ocorrência</p>
+            </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = ocorrencias.map(o => `
+            <div class="occurrence-item" onclick="verDetalhes('${o.id}')">
+            <div class="occurrence-header">
+                <div>
+                <div class="occurrence-title">#${o.numero} ${o.titulo || 'Sem título'}</div>
+                <div class="occurrence-meta">
+                    <span>📅 ${formatDate(o.created_at)}</span>
+                    <span>👤 ${o.denunciante}</span>
+                    <span>🏢 ${o.empresas?.nome || 'N/A'}</span>
+                    <span>🏭 ${o.setores?.nome || 'N/A'}</span>
+                    <span>📂 ${o.categorias?.nome || 'N/A'}</span>
+                </div>
+                </div>
+                <div class="occurrence-actions" onclick="event.stopPropagation()">
+                <span class="badge" style="background: ${getStatusColor(o.status)}22; color: ${getStatusColor(o.status)};">
+                    ${o.status}
+                </span>
+                <span class="badge" style="background: ${getPriorityColor(o.prioridade)}22; color: ${getPriorityColor(o.prioridade)};">
+                    ${o.prioridade}
+                </span>
+                </div>
+            </div>
+            ${o.descricao ? `<p style="color: #64748b; margin-top: 10px;">${o.descricao.substring(0, 150)}${o.descricao.length > 150 ? '...' : ''}</p>` : ''}
+            </div>
+        `).join('');
+    }
+
+    // Ver detalhes
+    function verDetalhes(id) {
+      window.location.href = `detalhes-ocorrencia.html?id=${id}`;
+    }
+
+    // Limpar filtros
+    function limparFiltros() {
+      document.getElementById('busca').value = '';
+      document.getElementById('filtroStatus').value = '';
+      document.getElementById('filtroPrioridade').value = '';
+      document.getElementById('filtroEmpresa').value = '';
+      document.getElementById('filtroSetor').value = '';
+      carregarOcorrencias();
+    }
+
+    // Busca em tempo real
+    document.getElementById('busca')?.addEventListener('input', () => {
+      clearTimeout(window.buscaTimeout);
+      window.buscaTimeout = setTimeout(carregarOcorrencias, 500);
+    });
+  </script>
+</body>
+</html>

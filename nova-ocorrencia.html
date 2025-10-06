@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nova Ocorrência - Sistema de Ocorrências</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <h1>📋 Sistema de Ocorrências</h1>
+      <div class="header-actions">
+        <div class="user-info">
+          <span id="userName">Usuário</span>
+          <span id="userRole" class="user-badge">USER</span>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="logout()">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav-content">
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <a href="ocorrencias.html" class="nav-link">Ocorrências</a>
+      <a href="nova-ocorrencia.html" class="nav-link active">Nova Ocorrência</a>
+      <a href="admin.html" class="nav-link" id="adminLink" style="display: none;">Administração</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Nova Ocorrência</h2>
+      </div>
+
+        <form id="formOcorrencia">
+            <div class="grid grid-2">
+                <div class="form-group">
+                <label class="form-label">Título (Opcional)</label>
+                <input type="text" id="titulo" class="form-input" placeholder="Título da ocorrência">
+                </div>
+
+                <div class="form-group">
+                <label class="form-label">Empresa <span style="color: red;">*</span></label>
+                <select id="empresa_id" class="form-select" required>
+                    <option value="">Selecione...</option>
+                </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Descrição (Opcional)</label>
+                <textarea id="descricao" class="form-textarea" placeholder="Descreva a ocorrência..."></textarea>
+            </div>
+
+            <div class="grid grid-3">
+                <div class="form-group">
+                    <label class="form-label">Status <span style="color: red;">*</span></label>
+                    <select id="status" class="form-select" required>
+                        <option value="">Selecione...</option>
+                        <option value="em andamento" selected>Em Andamento</option>
+                        <option value="resolvida">Resolvida</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                <label class="form-label">Prioridade <span style="color: red;">*</span></label>
+                <select id="prioridade" class="form-select" required>
+                    <option value="">Selecione...</option>
+                    <option value="baixa">Baixa</option>
+                    <option value="média" selected>Média</option>
+                    <option value="alta">Alta</option>
+                </select>
+                </div>
+
+                <div class="form-group">
+                <label class="form-label">Categoria <span style="color: red;">*</span></label>
+                <select id="categoria_id" class="form-select" required>
+                    <option value="">Selecione...</option>
+                </select>
+                </div>
+            </div>
+
+            <div class="grid grid-2">
+                <div class="form-group">
+                <label class="form-label">Setor <span style="color: red;">*</span></label>
+                <select id="setor_id" class="form-select" required>
+                    <option value="">Selecione...</option>
+                </select>
+                </div>
+
+                <div class="form-group">
+                <label class="form-label">Localização (Opcional)</label>
+                <input type="text" id="localizacao" class="form-input" placeholder="Ex: Prédio A, Sala 10">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Denunciante <span style="color: red;">*</span></label>
+                <select id="denuncianteSelect" class="form-select" onchange="toggleDenuncianteOutro()" required>
+                <option value="">Selecione...</option>
+                <option value="__outro__">Outro (digitar nome)</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="denuncianteOutroGroup" style="display: none;">
+                <label class="form-label">Nome do Denunciante <span style="color: red;">*</span></label>
+                <input type="text" id="denuncianteOutro" class="form-input" placeholder="Digite o nome do denunciante">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Anexos (Imagens/Arquivos) - Opcional</label>
+                <input type="file" id="arquivos" class="form-file" multiple accept="image/*,.pdf,.doc,.docx">
+                <small style="color: #64748b; display: block; margin-top: 5px;">
+                Você pode selecionar múltiplos arquivos
+                </small>
+            </div>
+
+            <div style="display: flex; gap: 15px; justify-content: flex-end; margin-top: 30px;">
+                <a href="ocorrencias.html" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">
+                <span id="btnText">Cadastrar Ocorrência</span>
+                <span id="btnLoading" class="loading" style="display: none;"></span>
+                </button>
+            </div>
+        </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  
+  <script>
+    let currentUser = null;
+
+    // Inicializar
+    window.addEventListener('DOMContentLoaded', async () => {
+      currentUser = await checkAuth();
+      if (!currentUser) return;
+
+      document.getElementById('userName').textContent = currentUser.nome;
+      document.getElementById('userRole').textContent = currentUser.role.toUpperCase();
+      
+      if (isAdmin(currentUser)) {
+        document.getElementById('adminLink').style.display = 'block';
+      }
+
+      await loadSelectOptions('empresa_id', 'empresas');
+      await loadSelectOptions('setor_id', 'setores');
+      await loadSelectOptions('categoria_id', 'categorias');
+      await carregarDenunciantes();
+    });
+
+    // Carregar denunciantes
+    async function carregarDenunciantes() {
+      const { data, error } = await supabase
+        .from('denunciantes')
+        .select('*')
+        .order('nome');
+
+      if (error) {
+        console.error('Erro ao carregar denunciantes:', error);
+        return;
+      }
+
+      const select = document.getElementById('denuncianteSelect');
+      data.forEach(d => {
+        const option = document.createElement('option');
+        option.value = d.nome;
+        option.textContent = d.nome;
+        select.appendChild(option);
+      });
+    }
+
+    // Toggle campo denunciante outro
+    function toggleDenuncianteOutro() {
+      const select = document.getElementById('denuncianteSelect');
+      const outroGroup = document.getElementById('denuncianteOutroGroup');
+      const outroInput = document.getElementById('denuncianteOutro');
+
+      if (select.value === '__outro__') {
+        outroGroup.style.display = 'block';
+        outroInput.required = true;
+      } else {
+        outroGroup.style.display = 'none';
+        outroInput.required = false;
+        outroInput.value = '';
+      }
+    }
+
+    // Submeter formulário
+    document.getElementById('formOcorrencia').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+        const btnText = document.getElementById('btnText');
+        const btnLoading = document.getElementById('btnLoading');
+        
+        btnText.style.display = 'none';
+        btnLoading.style.display = 'inline-block';
+
+        try {
+            // Pegar denunciante
+            let denunciante;
+            const denuncianteSelect = document.getElementById('denuncianteSelect').value;
+            if (denuncianteSelect === '__outro__') {
+            denunciante = document.getElementById('denuncianteOutro').value;
+            } else {
+            denunciante = denuncianteSelect;
+            }
+
+            // Upload de arquivos
+            const arquivosInput = document.getElementById('arquivos');
+            const arquivosUrls = [];
+            
+            if (arquivosInput.files.length > 0) {
+            for (const file of arquivosInput.files) {
+                try {
+                const url = await uploadFile(file, 'occurrences');
+                arquivosUrls.push({
+                    nome: file.name,
+                    url: url,
+                    tipo: file.type
+                });
+                } catch (uploadError) {
+                console.error('Erro ao fazer upload:', uploadError);
+                }
+            }
+            }
+
+            // Criar ocorrência (localizacao agora é opcional)
+            const { data, error } = await supabase
+            .from('occurrences')
+            .insert({
+                titulo: document.getElementById('titulo').value || null,
+                descricao: document.getElementById('descricao').value || null,
+                status: document.getElementById('status').value,
+                prioridade: document.getElementById('prioridade').value,
+                localizacao: document.getElementById('localizacao').value || 'Não informado',
+                denunciante: denunciante,
+                empresa_id: document.getElementById('empresa_id').value,
+                setor_id: document.getElementById('setor_id').value,
+                categoria_id: document.getElementById('categoria_id').value,
+                user_id: currentUser.id,
+                arquivos: arquivosUrls
+            })
+            .select();
+
+            if (error) throw error;
+
+            showNotification('Ocorrência cadastrada com sucesso!', 'success');
+            setTimeout(() => {
+            window.location.href = 'ocorrencias.html';
+            }, 1500);
+
+        } catch (error) {
+            console.error('Erro ao cadastrar ocorrência:', error);
+            showNotification('Erro ao cadastrar ocorrência. Tente novamente.', 'error');
+            btnText.style.display = 'inline';
+            btnLoading.style.display = 'none';
+        }
+    });
+  </script>
+</body>
+</html>

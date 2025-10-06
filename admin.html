@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administração - Sistema de Ocorrências</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <h1>📋 Sistema de Ocorrências</h1>
+      <div class="header-actions">
+        <div class="user-info">
+          <span id="userName">Usuário</span>
+          <span id="userRole" class="user-badge">ADMIN</span>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="logout()">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav-content">
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <a href="ocorrencias.html" class="nav-link">Ocorrências</a>
+      <a href="nova-ocorrencia.html" class="nav-link">Nova Ocorrência</a>
+      <a href="admin.html" class="nav-link active">Administração</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container-fluid">
+    <!-- Sub Navigation -->
+    <div class="card">
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button class="btn btn-primary btn-sm" onclick="mostrarSecao('usuarios')">Usuários</button>
+        <button class="btn btn-primary btn-sm" onclick="mostrarSecao('empresas')">Empresas</button>
+        <button class="btn btn-primary btn-sm" onclick="mostrarSecao('setores')">Setores</button>
+        <button class="btn btn-primary btn-sm" onclick="mostrarSecao('categorias')">Categorias</button>
+        <button class="btn btn-primary btn-sm" onclick="mostrarSecao('denunciantes')">Denunciantes</button>
+      </div>
+    </div>
+
+    <!-- USUÁRIOS -->
+    <div id="secaoUsuarios" class="card" style="display: none;">
+      <div class="card-header">
+        <h2 class="card-title">Gerenciar Usuários</h2>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalUsuario()">+ Novo Usuário</button>
+      </div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Email</th>
+            <th>Função</th>
+            <th>Data de Cadastro</th>
+            <th style="text-align: center;">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaUsuarios">
+          <tr><td colspan="5" style="text-align: center;">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- EMPRESAS -->
+    <div id="secaoEmpresas" class="card" style="display: none;">
+      <div class="card-header">
+        <h2 class="card-title">Gerenciar Empresas</h2>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalEmpresa()">+ Nova Empresa</button>
+      </div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Data de Cadastro</th>
+            <th style="text-align: center;">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaEmpresas">
+          <tr><td colspan="3" style="text-align: center;">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SETORES -->
+    <div id="secaoSetores" class="card" style="display: none;">
+      <div class="card-header">
+        <h2 class="card-title">Gerenciar Setores</h2>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalSetor()">+ Novo Setor</button>
+      </div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Data de Cadastro</th>
+            <th style="text-align: center;">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaSetores">
+          <tr><td colspan="3" style="text-align: center;">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CATEGORIAS -->
+    <div id="secaoCategorias" class="card" style="display: none;">
+      <div class="card-header">
+        <h2 class="card-title">Gerenciar Categorias</h2>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalCategoria()">+ Nova Categoria</button>
+      </div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Cor</th>
+            <th>Data de Cadastro</th>
+            <th style="text-align: center;">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaCategorias">
+          <tr><td colspan="4" style="text-align: center;">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- DENUNCIANTES -->
+    <div id="secaoDenunciantes" class="card" style="display: none;">
+      <div class="card-header">
+        <h2 class="card-title">Gerenciar Denunciantes</h2>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalDenunciante()">+ Novo Denunciante</button>
+      </div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Data de Cadastro</th>
+            <th style="text-align: center;">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaDenunciantes">
+          <tr><td colspan="3" style="text-align: center;">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal Usuário -->
+  <div id="modalUsuario" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalUsuarioTitulo">Novo Usuário</h3>
+        <button class="modal-close" onclick="fecharModalUsuario()">×</button>
+      </div>
+      <form id="formUsuario">
+        <input type="hidden" id="usuarioId">
+        <div class="form-group">
+          <label class="form-label">Nome <span style="color: red;">*</span></label>
+          <input type="text" id="usuarioNome" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email <span style="color: red;">*</span></label>
+          <input type="email" id="usuarioEmail" class="form-input" required>
+        </div>
+        <div class="form-group" id="senhaGroup">
+          <label class="form-label">Senha <span style="color: red;">*</span></label>
+          <input type="password" id="usuarioSenha" class="form-input" minlength="6">
+          <small style="color: #64748b;">Mínimo 6 caracteres</small>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Função <span style="color: red;">*</span></label>
+          <select id="usuarioRole" class="form-select" required>
+            <option value="user">Usuário</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+          <button type="button" class="btn btn-secondary" onclick="fecharModalUsuario()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  !-- Modal Genérico (Empresa, Setor, Categoria, Denunciante) -->
+<div id="modalGenerico" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="modalGenericoTitulo">Novo Item</h3>
+      <button class="modal-close" onclick="fecharModalGenerico()">×</button>
+    </div>
+    <form id="formGenerico">
+      <input type="hidden" id="genericoId">
+      <input type="hidden" id="genericoTabela">
+      <div class="form-group">
+        <label class="form-label">Nome <span style="color: red;">*</span></label>
+        <input type="text" id="genericoNome" class="form-input" required>
+      </div>
+      <div class="form-group" id="corGroup" style="display: none;">
+        <label class="form-label">Cor</label>
+        
+        <!-- Cores Pré-definidas -->
+        <div style="margin-bottom: 15px;">
+          <label style="font-size: 14px; color: #64748b; margin-bottom: 10px; display: block;">Cores Rápidas:</label>
+          <div class="color-presets">
+            <div class="color-preset" style="background: #ef4444;" onclick="selecionarCorPreset('#ef4444')" title="Vermelho"></div>
+            <div class="color-preset" style="background: #f59e0b;" onclick="selecionarCorPreset('#f59e0b')" title="Laranja"></div>
+            <div class="color-preset" style="background: #eab308;" onclick="selecionarCorPreset('#eab308')" title="Amarelo"></div>
+            <div class="color-preset" style="background: #10b981;" onclick="selecionarCorPreset('#10b981')" title="Verde"></div>
+            <div class="color-preset" style="background: #06b6d4;" onclick="selecionarCorPreset('#06b6d4')" title="Ciano"></div>
+            <div class="color-preset" style="background: #3b82f6;" onclick="selecionarCorPreset('#3b82f6')" title="Azul"></div>
+            <div class="color-preset" style="background: #8b5cf6;" onclick="selecionarCorPreset('#8b5cf6')" title="Roxo"></div>
+            <div class="color-preset" style="background: #ec4899;" onclick="selecionarCorPreset('#ec4899')" title="Rosa"></div>
+            <div class="color-preset" style="background: #6b7280;" onclick="selecionarCorPreset('#6b7280')" title="Cinza"></div>
+            <div class="color-preset" style="background: #1e293b;" onclick="selecionarCorPreset('#1e293b')" title="Preto"></div>
+          </div>
+        </div>
+
+        <!-- Seletor Personalizado -->
+        <div>
+          <label style="font-size: 14px; color: #64748b; margin-bottom: 10px; display: block;">Ou escolha uma cor personalizada:</label>
+          <div style="display: flex; gap: 15px; align-items: center;">
+            <input type="color" id="genericoCor" class="form-input-color" value="#3b82f6">
+            <div id="corSelecionada" class="cor-preview"></div>
+            <span id="corHex" style="font-family: monospace; color: #64748b;">#3b82f6</span>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+        <button type="button" class="btn btn-secondary" onclick="fecharModalGenerico()">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  
+  <script>
+    let currentUser = null;
+
+    // Inicializar
+    window.addEventListener('DOMContentLoaded', async () => {
+      currentUser = await requireAdmin();
+      if (!currentUser) return;
+
+      document.getElementById('userName').textContent = currentUser.nome;
+      
+      // Mostrar primeira seção
+      mostrarSecao('usuarios');
+    });
+
+    // Mostrar seção
+    function mostrarSecao(secao) {
+      document.getElementById('secaoUsuarios').style.display = 'none';
+      document.getElementById('secaoEmpresas').style.display = 'none';
+      document.getElementById('secaoSetores').style.display = 'none';
+      document.getElementById('secaoCategorias').style.display = 'none';
+      document.getElementById('secaoDenunciantes').style.display = 'none';
+
+      document.getElementById(`secao${secao.charAt(0).toUpperCase() + secao.slice(1)}`).style.display = 'block';
+
+      // Carregar dados da seção
+      if (secao === 'usuarios') carregarUsuarios();
+      if (secao === 'empresas') carregarEmpresas();
+      if (secao === 'setores') carregarSetores();
+      if (secao === 'categorias') carregarCategorias();
+      if (secao === 'denunciantes') carregarDenunciantes();
+    }
+
+    // ============ USUÁRIOS ============
+    async function carregarUsuarios() {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao carregar usuários:', error);
+        return;
+      }
+
+      const tbody = document.getElementById('tabelaUsuarios');
+      tbody.innerHTML = data.map(u => `
+        <tr>
+          <td>${u.nome}</td>
+          <td>${u.email}</td>
+          <td><span class="badge ${u.role === 'admin' ? 'badge-info' : 'badge-success'}">${u.role}</span></td>
+          <td>${formatDate(u.created_at)}</td>
+          <td style="text-align: center;">
+            <button class="btn btn-warning btn-sm" onclick='editarUsuario(${JSON.stringify(u)})'>Editar</button>
+            <button class="btn btn-danger btn-sm" onclick="excluirUsuario('${u.id}')">Excluir</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function abrirModalUsuario() {
+      document.getElementById('modalUsuarioTitulo').textContent = 'Novo Usuário';
+      document.getElementById('formUsuario').reset();
+      document.getElementById('usuarioId').value = '';
+      document.getElementById('senhaGroup').style.display = 'block';
+      document.getElementById('usuarioSenha').required = true;
+      document.getElementById('modalUsuario').classList.add('active');
+    }
+
+    function editarUsuario(usuario) {
+      document.getElementById('modalUsuarioTitulo').textContent = 'Editar Usuário';
+      document.getElementById('usuarioId').value = usuario.id;
+      document.getElementById('usuarioNome').value = usuario.nome;
+      document.getElementById('usuarioEmail').value = usuario.email;
+      document.getElementById('usuarioRole').value = usuario.role;
+      document.getElementById('senhaGroup').style.display = 'none';
+      document.getElementById('usuarioSenha').required = false;
+      document.getElementById('modalUsuario').classList.add('active');
+    }
+
+    function fecharModalUsuario() {
+      document.getElementById('modalUsuario').classList.remove('active');
+    }
+
+    document.getElementById('formUsuario').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const id = document.getElementById('usuarioId').value;
+      const nome = document.getElementById('usuarioNome').value;
+      const email = document.getElementById('usuarioEmail').value;
+      const senha = document.getElementById('usuarioSenha').value;
+      const role = document.getElementById('usuarioRole').value;
+
+      try {
+        if (id) {
+          // Editar usuário existente
+          const { error } = await supabase
+            .from('users')
+            .update({ nome, email, role })
+            .eq('id', id);
+
+          if (error) throw error;
+          showNotification('Usuário atualizado com sucesso!', 'success');
+        } else {
+          // Criar novo usuário
+          // Primeiro criar no auth
+          const { data: authData, error: authError } = await supabase.auth.signUp({
+            email,
+            password: senha
+          });
+
+          if (authError) throw authError;
+
+          // Depois criar na tabela users
+          const { error: userError } = await supabase
+            .from('users')
+            .insert({
+              nome,
+              email,
+              role,
+              auth_user_id: authData.user.id
+            });
+
+          if (userError) throw userError;
+          showNotification('Usuário criado com sucesso!', 'success');
+        }
+
+        fecharModalUsuario();
+        carregarUsuarios();
+      } catch (error) {
+        console.error('Erro ao salvar usuário:', error);
+        showNotification('Erro ao salvar usuário: ' + error.message, 'error');
+      }
+    });
+
+    async function excluirUsuario(id) {
+      if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
+
+      try {
+        const { error } = await supabase
+          .from('users')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+        showNotification('Usuário excluído com sucesso!', 'success');
+        carregarUsuarios();
+      } catch (error) {
+        console.error('Erro ao excluir usuário:', error);
+        showNotification('Erro ao excluir usuário', 'error');
+      }
+    }
+
+    // ============ EMPRESAS ============
+    async function carregarEmpresas() {
+      const { data, error } = await supabase
+        .from('empresas')
+        .select('*')
+        .order('nome');
+
+      if (error) {
+        console.error('Erro ao carregar empresas:', error);
+        return;
+      }
+
+      const tbody = document.getElementById('tabelaEmpresas');
+      tbody.innerHTML = data.map(e => `
+        <tr>
+          <td>${e.nome}</td>
+          <td>${formatDate(e.created_at)}</td>
+          <td style="text-align: center;">
+            <button class="btn btn-warning btn-sm" onclick='editarGenerico("empresas", ${JSON.stringify(e)})'>Editar</button>
+            <button class="btn btn-danger btn-sm" onclick="excluirGenerico('empresas', '${e.id}', '${e.nome}')">Excluir</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function abrirModalEmpresa() {
+      abrirModalGenerico('empresas', 'Empresa');
+    }
+
+    // ============ SETORES ============
+    async function carregarSetores() {
+      const { data, error } = await supabase
+        .from('setores')
+        .select('*')
+        .order('nome');
+
+      if (error) {
+        console.error('Erro ao carregar setores:', error);
+        return;
+      }
+
+      const tbody = document.getElementById('tabelaSetores');
+      tbody.innerHTML = data.map(s => `
+        <tr>
+          <td>${s.nome}</td>
+          <td>${formatDate(s.created_at)}</td>
+          <td style="text-align: center;">
+            <button class="btn btn-warning btn-sm" onclick='editarGenerico("setores", ${JSON.stringify(s)})'>Editar</button>
+            <button class="btn btn-danger btn-sm" onclick="excluirGenerico('setores', '${s.id}', '${s.nome}')">Excluir</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function abrirModalSetor() {
+      abrirModalGenerico('setores', 'Setor');
+    }
+
+    // ============ CATEGORIAS ============
+    async function carregarCategorias() {
+      const { data, error } = await supabase
+        .from('categorias')
+        .select('*')
+        .order('nome');
+
+      if (error) {
+        console.error('Erro ao carregar categorias:', error);
+        return;
+      }
+
+      const tbody = document.getElementById('tabelaCategorias');
+      tbody.innerHTML = data.map(c => `
+        <tr>
+          <td>${c.nome}</td>
+          <td><span style="display: inline-block; width: 30px; height: 20px; background: ${c.cor || '#ccc'}; border-radius: 4px;"></span></td>
+          <td>${formatDate(c.created_at)}</td>
+          <td style="text-align: center;">
+            <button class="btn btn-warning btn-sm" onclick='editarGenerico("categorias", ${JSON.stringify(c)})'>Editar</button>
+            <button class="btn btn-danger btn-sm" onclick="excluirGenerico('categorias', '${c.id}', '${c.nome}')">Excluir</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function abrirModalCategoria() {
+      abrirModalGenerico('categorias', 'Categoria', true);
+    }
+
+    // ============ DENUNCIANTES ============
+    async function carregarDenunciantes() {
+      const { data, error } = await supabase
+        .from('denunciantes')
+        .select('*')
+        .order('nome');
+
+      if (error) {
+        console.error('Erro ao carregar denunciantes:', error);
+        return;
+      }
+
+      const tbody = document.getElementById('tabelaDenunciantes');
+      tbody.innerHTML = data.map(d => `
+        <tr>
+          <td>${d.nome}</td>
+          <td>${formatDate(d.created_at)}</td>
+          <td style="text-align: center;">
+            <button class="btn btn-warning btn-sm" onclick='editarGenerico("denunciantes", ${JSON.stringify(d)})'>Editar</button>
+            <button class="btn btn-danger btn-sm" onclick="excluirGenerico('denunciantes', '${d.id}', '${d.nome}')">Excluir</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function abrirModalDenunciante() {
+      abrirModalGenerico('denunciantes', 'Denunciante');
+    }
+
+    // ============ MODAL GENÉRICO ============
+    function abrirModalGenerico(tabela, titulo, mostrarCor = false) {
+      document.getElementById('modalGenericoTitulo').textContent = `Novo ${titulo}`;
+      document.getElementById('formGenerico').reset();
+      document.getElementById('genericoId').value = '';
+      document.getElementById('genericoTabela').value = tabela;
+      document.getElementById('corGroup').style.display = mostrarCor ? 'block' : 'none';
+      document.getElementById('modalGenerico').classList.add('active');
+    }
+
+    function editarGenerico(tabela, item) {
+      const titulos = {
+        'empresas': 'Empresa',
+        'setores': 'Setor',
+        'categorias': 'Categoria',
+        'denunciantes': 'Denunciante'
+      };
+      
+      document.getElementById('modalGenericoTitulo').textContent = `Editar ${titulos[tabela]}`;
+      document.getElementById('genericoId').value = item.id;
+      document.getElementById('genericoNome').value = item.nome;
+      document.getElementById('genericoTabela').value = tabela;
+      
+      if (tabela === 'categorias') {
+        document.getElementById('corGroup').style.display = 'block';
+        document.getElementById('genericoCor').value = item.cor || '#3b82f6';
+      } else {
+        document.getElementById('corGroup').style.display = 'none';
+      }
+      
+      document.getElementById('modalGenerico').classList.add('active');
+    }
+
+    function fecharModalGenerico() {
+      document.getElementById('modalGenerico').classList.remove('active');
+    }
+
+    document.getElementById('formGenerico').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const id = document.getElementById('genericoId').value;
+      const nome = document.getElementById('genericoNome').value;
+      const tabela = document.getElementById('genericoTabela').value;
+      const cor = document.getElementById('genericoCor').value;
+
+      try {
+        const dados = { nome };
+        if (tabela === 'categorias') {
+          dados.cor = cor;
+        }
+
+        if (id) {
+          // Editar
+          const { error } = await supabase
+            .from(tabela)
+            .update(dados)
+            .eq('id', id);
+
+          if (error) throw error;
+          showNotification('Item atualizado com sucesso!', 'success');
+        } else {
+          // Criar
+          const { error } = await supabase
+            .from(tabela)
+            .insert(dados);
+
+          if (error) throw error;
+          showNotification('Item criado com sucesso!', 'success');
+        }
+
+        fecharModalGenerico();
+        
+        // Recarregar tabela apropriada
+        if (tabela === 'empresas') carregarEmpresas();
+        if (tabela === 'setores') carregarSetores();
+        if (tabela === 'categorias') carregarCategorias();
+        if (tabela === 'denunciantes') carregarDenunciantes();
+        
+      } catch (error) {
+        console.error('Erro ao salvar:', error);
+        showNotification('Erro ao salvar item', 'error');
+      }
+    });
+
+    async function excluirGenerico(tabela, id, nome) {
+      if (!confirm(`Tem certeza que deseja excluir "${nome}"?`)) return;
+
+      try {
+        const { error } = await supabase
+          .from(tabela)
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+        showNotification('Item excluído com sucesso!', 'success');
+        
+        // Recarregar tabela apropriada
+        if (tabela === 'empresas') carregarEmpresas();
+        if (tabela === 'setores') carregarSetores();
+        if (tabela === 'categorias') carregarCategorias();
+        if (tabela === 'denunciantes') carregarDenunciantes();
+        
+      } catch (error) {
+        console.error('Erro ao excluir:', error);
+        showNotification('Erro ao excluir item', 'error');
+      }
+    }
+
+    // Função para selecionar cor preset
+    function selecionarCorPreset(cor) {
+    document.getElementById('genericoCor').value = cor;
+    document.getElementById('corSelecionada').style.background = cor;
+    document.getElementById('corHex').textContent = cor;
+    
+    // Remover active de todos
+    document.querySelectorAll('.color-preset').forEach(el => {
+        el.classList.remove('active');
+    });
+    
+    // Adicionar active no clicado
+    event.target.classList.add('active');
+    }
+
+    // Atualizar preview ao mudar cor manualmente
+    document.getElementById('genericoCor')?.addEventListener('input', function(e) {
+    const cor = e.target.value;
+    document.getElementById('corSelecionada').style.background = cor;
+    document.getElementById('corHex').textContent = cor;
+    
+    // Remover active de todos os presets
+    document.querySelectorAll('.color-preset').forEach(el => {
+        el.classList.remove('active');
+    });
+    });
+
+    // Inicializar preview quando abrir modal de categoria
+    function abrirModalCategoria() {
+    abrirModalGenerico('categorias', 'Categoria', true);
+    // Definir cor padrão
+    setTimeout(() => {
+        document.getElementById('corSelecionada').style.background = '#3b82f6';
+    }, 100);
+    }
+  </script>
+</body>
+</html>

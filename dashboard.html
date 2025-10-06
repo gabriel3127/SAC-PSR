@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Sistema de Ocorrências</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+        <h1>Sistema de Ocorrências</h1>
+      <div class="header-actions">
+        <div class="user-info">
+          <span id="userName">Usuário</span>
+          <span id="userRole" class="user-badge">USER</span>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="logout()">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav-content">
+      <a href="dashboard.html" class="nav-link active">Dashboard</a>
+      <a href="ocorrencias.html" class="nav-link">Ocorrências</a>
+      <a href="nova-ocorrencia.html" class="nav-link">Nova Ocorrência</a>
+      <a href="admin.html" class="nav-link" id="adminLink" style="display: none;">Administração</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container-fluid">
+    <!-- Filtro de Período -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Filtros</h2>
+      </div>
+      <div class="filters">
+        <div class="filter-group">
+          <label class="form-label">Data Início</label>
+          <input type="date" id="dataInicio" class="form-input">
+        </div>
+        <div class="filter-group">
+          <label class="form-label">Data Fim</label>
+          <input type="date" id="dataFim" class="form-input">
+        </div>
+        <div class="filter-group">
+          <button class="btn btn-primary" onclick="atualizarDashboard()">Filtrar</button>
+          <button class="btn btn-secondary" onclick="limparFiltros()">Limpar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cards de Estatísticas -->
+    <div class="grid grid-4">
+      <div class="stat-card" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+        <div class="stat-value" id="totalOcorrencias">0</div>
+        <div class="stat-label">Total de Ocorrências</div>
+      </div>
+      
+      <div class="stat-card" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+        <div class="stat-value" id="totalAbertas">0</div>
+        <div class="stat-label">Abertas</div>
+      </div>
+      
+      <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+        <div class="stat-value" id="totalAndamento">0</div>
+        <div class="stat-label">Em Andamento</div>
+      </div>
+      
+      <div class="stat-card" style="background: linear-gradient(135deg, #10b981, #059669);">
+        <div class="stat-value" id="totalResolvidas">0</div>
+        <div class="stat-label">Resolvidas</div>
+      </div>
+    </div>
+
+    <!-- Gráficos de Pizza -->
+    <div class="grid grid-3">
+      <!-- Por Setor -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Ocorrências por Setor</h2>
+        </div>
+        <div style="position: relative; height: 300px;">
+          <canvas id="chartSetor"></canvas>
+        </div>
+      </div>
+
+      <!-- Por Empresa -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Ocorrências por Empresa</h2>
+        </div>
+        <div style="position: relative; height: 300px;">
+          <canvas id="chartEmpresa"></canvas>
+        </div>
+      </div>
+
+      <!-- Por Prioridade -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Ocorrências por Prioridade</h2>
+        </div>
+        <div style="position: relative; height: 300px;">
+          <canvas id="chartPrioridade"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Por Categoria (Tabela) -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Ocorrências por Categoria</h2>
+      </div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Categoria</th>
+            <th style="text-align: right;">Quantidade</th>
+            <th style="text-align: right;">%</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaCategorias">
+          <tr>
+            <td colspan="3" style="text-align: center; color: #64748b;">Carregando...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  
+  <script>
+    let currentUser = null;
+    let charts = {
+        chartSetor: null,
+        chartEmpresa: null,
+        chartPrioridade: null
+    };
+
+    // Cores para os gráficos
+    const cores = [
+        '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
+        '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
+    ];
+
+    // Inicializar
+    window.addEventListener('DOMContentLoaded', async () => {
+      currentUser = await checkAuth();
+      if (!currentUser) return;
+
+      document.getElementById('userName').textContent = currentUser.nome;
+      document.getElementById('userRole').textContent = currentUser.role.toUpperCase();
+      
+      if (isAdmin(currentUser)) {
+        document.getElementById('adminLink').style.display = 'block';
+      }
+
+      // Definir data padrão (últimos 30 dias)
+      const hoje = new Date();
+      const dataFim = hoje.toISOString().split('T')[0];
+      const dataInicio = new Date(hoje.setDate(hoje.getDate() - 30)).toISOString().split('T')[0];
+      
+      document.getElementById('dataInicio').value = dataInicio;
+      document.getElementById('dataFim').value = dataFim;
+
+      await atualizarDashboard();
+    });
+
+    // Atualizar Dashboard
+    async function atualizarDashboard() {
+      const dataInicio = document.getElementById('dataInicio').value;
+      const dataFim = document.getElementById('dataFim').value;
+
+      let query = supabase
+        .from('occurrences')
+        .select(`
+          *,
+          empresas(nome),
+          setores(nome),
+          categorias(nome)
+        `);
+
+      if (dataInicio) {
+        query = query.gte('created_at', dataInicio + 'T00:00:00');
+      }
+      if (dataFim) {
+        query = query.lte('created_at', dataFim + 'T23:59:59');
+      }
+
+      const { data: ocorrencias, error } = await query;
+
+      if (error) {
+        console.error('Erro ao carregar ocorrências:', error);
+        showNotification('Erro ao carregar dados', 'error');
+        return;
+      }
+
+      // Estatísticas gerais
+      document.getElementById('totalOcorrencias').textContent = ocorrencias.length;
+      document.getElementById('totalAbertas').textContent = ocorrencias.filter(o => o.status === 'aberta').length;
+      document.getElementById('totalAndamento').textContent = ocorrencias.filter(o => o.status === 'em andamento').length;
+      document.getElementById('totalResolvidas').textContent = ocorrencias.filter(o => o.status === 'resolvida').length;
+
+      // Por Setor
+      const porSetor = {};
+      ocorrencias.forEach(o => {
+        const setor = o.setores?.nome || 'Sem setor';
+        porSetor[setor] = (porSetor[setor] || 0) + 1;
+      });
+      renderGraficoPizza('chartSetor', porSetor, 'chartSetor');
+
+      // Por Empresa
+      const porEmpresa = {};
+      ocorrencias.forEach(o => {
+        const empresa = o.empresas?.nome || 'Sem empresa';
+        porEmpresa[empresa] = (porEmpresa[empresa] || 0) + 1;
+      });
+      renderGraficoPizza('chartEmpresa', porEmpresa, 'chartEmpresa');
+
+      // Por Prioridade
+      const porPrioridade = {
+        'Baixa': ocorrencias.filter(o => o.prioridade === 'baixa').length,
+        'Média': ocorrencias.filter(o => o.prioridade === 'média').length,
+        'Alta': ocorrencias.filter(o => o.prioridade === 'alta').length
+      };
+      renderGraficoPizza('chartPrioridade', porPrioridade, 'chartPrioridade', ['#10b981', '#f59e0b', '#ef4444']);
+
+      // Por Categoria (Tabela)
+      const porCategoria = {};
+      ocorrencias.forEach(o => {
+        const categoria = o.categorias?.nome || 'Sem categoria';
+        porCategoria[categoria] = (porCategoria[categoria] || 0) + 1;
+      });
+      renderTabelaComPercentual('tabelaCategorias', porCategoria, ocorrencias.length);
+    }
+
+    // Renderizar gráfico de pizza
+    function renderGraficoPizza(canvasId, dados, chartVar, coresCustom = null) {
+        const ctx = document.getElementById(canvasId);
+    
+        // Destruir gráfico anterior se existir
+        if (charts[chartVar]) {
+            charts[chartVar].destroy();
+        }
+
+        const entries = Object.entries(dados).sort((a, b) => b[1] - a[1]);
+        
+        if (entries.length === 0) {
+            ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+            return;
+        }
+
+        const labels = entries.map(([k, v]) => k);
+        const values = entries.map(([k, v]) => v);
+        const colors = coresCustom || cores.slice(0, entries.length);
+
+            charts[chartVar] = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: colors,
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+                },
+                options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        font: {
+                        size: 12
+                        }
+                    }
+                    },
+                    tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                        const label = context.label || '';
+                        const value = context.parsed || 0;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return `${label}: ${value} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+    // Renderizar tabela com percentual
+    function renderTabelaComPercentual(tabelaId, dados, total) {
+      const tbody = document.getElementById(tabelaId);
+      tbody.innerHTML = '';
+
+      const entries = Object.entries(dados).sort((a, b) => b[1] - a[1]);
+
+      if (entries.length === 0 || total === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #64748b;">Nenhum dado encontrado</td></tr>';
+        return;
+      }
+
+      entries.forEach(([chave, valor]) => {
+        const percentual = ((valor / total) * 100).toFixed(1);
+        const row = tbody.insertRow();
+        row.innerHTML = `
+          <td style="text-transform: capitalize;">${chave}</td>
+          <td style="text-align: right; font-weight: 600;">${valor}</td>
+          <td style="text-align: right;">${percentual}%</td>
+        `;
+      });
+    }
+
+    // Limpar filtros
+    function limparFiltros() {
+      const hoje = new Date();
+      const dataFim = hoje.toISOString().split('T')[0];
+      const dataInicio = new Date(hoje.setDate(hoje.getDate() - 30)).toISOString().split('T')[0];
+      
+      document.getElementById('dataInicio').value = dataInicio;
+      document.getElementById('dataFim').value = dataFim;
+      
+      atualizarDashboard();
+    }
+  </script>
+</body>
+</html>
