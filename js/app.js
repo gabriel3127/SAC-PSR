@@ -9,7 +9,6 @@ function formatDate(dateString) {
 // Obter cor por status
 function getStatusColor(status) {
   const colors = {
-    'aberta': '#ef4444',
     'em andamento': '#f59e0b',
     'resolvida': '#10b981'
   };

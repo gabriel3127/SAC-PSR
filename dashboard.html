@@ -5,7 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Sistema de Ocorrências</title>
   <link rel="stylesheet" href="css/style.css">
+  
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <!-- Favicon PNG (mais moderno) -->
+  <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
+
+  <!-- Para dispositivos Apple -->
+  <link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
+
+  <!-- Para Android/Chrome -->
+  <link rel="manifest" href="images/site.webmanifest">
+
 </head>
 <body>
   <!-- Header -->
@@ -60,11 +72,6 @@
       <div class="stat-card" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
         <div class="stat-value" id="totalOcorrencias">0</div>
         <div class="stat-label">Total de Ocorrências</div>
-      </div>
-      
-      <div class="stat-card" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
-        <div class="stat-value" id="totalAbertas">0</div>
-        <div class="stat-label">Abertas</div>
       </div>
       
       <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
@@ -206,7 +213,6 @@
 
       // Estatísticas gerais
       document.getElementById('totalOcorrencias').textContent = ocorrencias.length;
-      document.getElementById('totalAbertas').textContent = ocorrencias.filter(o => o.status === 'aberta').length;
       document.getElementById('totalAndamento').textContent = ocorrencias.filter(o => o.status === 'em andamento').length;
       document.getElementById('totalResolvidas').textContent = ocorrencias.filter(o => o.status === 'resolvida').length;
 

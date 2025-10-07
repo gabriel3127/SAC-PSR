@@ -5,12 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ocorrências - Sistema de Ocorrências</title>
   <link rel="stylesheet" href="css/style.css">
+
+  <!-- Favicon PNG (mais moderno) -->
+  <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16x16.png">
+
+  <!-- Para dispositivos Apple -->
+  <link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
+
+  <!-- Para Android/Chrome -->
+  <link rel="manifest" href="images/site.webmanifest">
+
 </head>
 <body>
   <!-- Header -->
   <header class="header">
     <div class="header-content">
-      <h1>📋 Sistema de Ocorrências</h1>
+      <h1>Sistema de Ocorrências</h1>
       <div class="header-actions">
         <div class="user-info">
           <span id="userName">Usuário</span>
@@ -164,43 +175,70 @@
 
     // Renderizar ocorrências
     function renderizarOcorrencias(ocorrencias) {
-        const container = document.getElementById('listaOcorrencias');
+      const container = document.getElementById('listaOcorrencias');
 
-        if (ocorrencias.length === 0) {
-            container.innerHTML = `
-            <div style="text-align: center; padding: 40px; color: #64748b;">
-                <p style="font-size: 18px; margin-bottom: 10px;">📭 Nenhuma ocorrência encontrada</p>
-                <p>Tente ajustar os filtros ou criar uma nova ocorrência</p>
-            </div>
-            `;
-            return;
-        }
+      if (ocorrencias.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: #64748b;">
+            <p style="font-size: 18px; margin-bottom: 10px;">📭 Nenhuma ocorrência encontrada</p>
+            <p>Tente ajustar os filtros ou criar uma nova ocorrência</p>
+          </div>
+        `;
+        return;
+      }
 
-        container.innerHTML = ocorrencias.map(o => `
-            <div class="occurrence-item" onclick="verDetalhes('${o.id}')">
-            <div class="occurrence-header">
-                <div>
-                <div class="occurrence-title">#${o.numero} ${o.titulo || 'Sem título'}</div>
-                <div class="occurrence-meta">
-                    <span>📅 ${formatDate(o.created_at)}</span>
-                    <span>👤 ${o.denunciante}</span>
-                    <span>🏢 ${o.empresas?.nome || 'N/A'}</span>
-                    <span>🏭 ${o.setores?.nome || 'N/A'}</span>
-                    <span>📂 ${o.categorias?.nome || 'N/A'}</span>
-                </div>
-                </div>
-                <div class="occurrence-actions" onclick="event.stopPropagation()">
-                <span class="badge" style="background: ${getStatusColor(o.status)}22; color: ${getStatusColor(o.status)};">
-                    ${o.status}
-                </span>
-                <span class="badge" style="background: ${getPriorityColor(o.prioridade)}22; color: ${getPriorityColor(o.prioridade)};">
-                    ${o.prioridade}
-                </span>
-                </div>
+      container.innerHTML = ocorrencias.map(o => `
+        <div class="occurrence-item" onclick="verDetalhes('${o.id}')">
+          <div class="occurrence-header">
+            <div>
+              <div class="occurrence-title">#${o.numero} ${o.titulo || 'Sem título'}</div>
+              <div class="occurrence-meta">
+                <span>📅 ${formatDate(o.created_at)}</span>
+                <span>👤 ${o.denunciante}</span>
+                <span>🏢 ${o.empresas?.nome || 'N/A'}</span>
+                <span>🏭 ${o.setores?.nome || 'N/A'}</span>
+                <span>📂 ${o.categorias?.nome || 'N/A'}</span>
+              </div>
             </div>
-            ${o.descricao ? `<p style="color: #64748b; margin-top: 10px;">${o.descricao.substring(0, 150)}${o.descricao.length > 150 ? '...' : ''}</p>` : ''}
+            <div class="occurrence-actions" onclick="event.stopPropagation()">
+              <span class="badge" style="background: ${getStatusColor(o.status)}22; color: ${getStatusColor(o.status)};">
+                ${o.status}
+              </span>
+              <span class="badge" style="background: ${getPriorityColor(o.prioridade)}22; color: ${getPriorityColor(o.prioridade)};">
+                ${o.prioridade}
+              </span>
+              ${o.status !== 'resolvida' ? `
+                <button class="btn btn-success btn-sm" onclick="event.stopPropagation(); resolverOcorrencia('${o.id}', ${o.numero})" title="Marcar como resolvida">
+                  ✓ Resolver
+                </button>
+              ` : ''}
             </div>
-        `).join('');
+          </div>
+          ${o.descricao ? `<p style="color: #64748b; margin-top: 10px;">${o.descricao.substring(0, 150)}${o.descricao.length > 150 ? '...' : ''}</p>` : ''}
+        </div>
+      `).join('');
+    }
+
+    // Nova função para resolver ocorrência rapidamente
+    async function resolverOcorrencia(id, numero) {
+      if (!confirm(`Deseja marcar a ocorrência #${numero} como resolvida?`)) {
+        return;
+      }
+
+      try {
+        const { error } = await supabase
+          .from('occurrences')
+          .update({ status: 'resolvida' })
+          .eq('id', id);
+
+        if (error) throw error;
+
+        showNotification('Ocorrência marcada como resolvida!', 'success');
+        await carregarOcorrencias(); // Recarregar lista
+      } catch (error) {
+        console.error('Erro ao resolver ocorrência:', error);
+        showNotification('Erro ao atualizar ocorrência', 'error');
+      }
     }
 
     // Ver detalhes
